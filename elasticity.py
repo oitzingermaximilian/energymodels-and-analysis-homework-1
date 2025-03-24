@@ -60,15 +60,48 @@ def read_load_profiles(excel_file_path, sheet_name=0):
 # Example usage:
 load = read_load_profiles("data_assignement_1/hourly_load_profile_electricity_AT_2023.xlsx")
 prices = read_hourly_prices("data_assignement_1/preise2023.csv")
-print(load)
-print(prices)
+prices_euro_per_mwh = prices * 10
+# Beispiel: Lade die Daten (Passe den Pfad an)
+# df = pd.read_csv('your_data.csv')
+
+# Angenommene Spaltennamen: 'Price' (in ct/kWh), 'Demand' (in MWh/h)
+# Falls die Namen anders sind, anpassen!
+
+# Shift-Transformation durchführen
+shift_value = abs(prices_euro_per_mwh.min()) + 100
+prices_shifted = prices_euro_per_mwh + shift_value
+
+# Logarithmieren
+df_logp = np.log(prices_shifted)
+df_logq = np.log(load)
+
+# Regression durchführen
+X = sm.add_constant(df_logp)  # Konstante für das Modell hinzufügen
+Y = df_logq
+model = sm.OLS(Y, X).fit()
+
+# Ergebnisse ausgeben
+print(model.summary())
+
+# Elastizität = Regressionskoeffizient von log_P
+elasticity = model.params['const']  # Hier ist der Koeffizient des Preises
+print(f'Preis-Elastizität der Nachfrage: {elasticity:.4f}')
+# p-Wert des Preis-Koeffizienten
+p_value = model.pvalues['const']
+print(f'p-Wert der Preiselastizität: {p_value:.4f}')
+
+# Signifikanz prüfen
+if p_value < 0.05:
+    print("Die Preiselastizität ist signifikant.")
+else:
+    print("Die Preiselastizität ist nicht signifikant.")
 
 
-# For non-log methods, we can keep negatives but add small offset to avoid division by zero
-load_clean = load.copy()
-price_clean = prices.copy()
-load_clean = load_clean + 1e-6  # Small offset to avoid exact zeros
-price_clean = (price_clean + 1e-6) * 10 #to convert to €/Mwh
 
-log_price = np.log(price_clean)
-log_load = np.log(load_clean)
+# Visualisierung der Regression
+plt.scatter(df_logp, df_logq, alpha=0.5, label='Daten')
+plt.plot(df_logp, model.predict(X), color='red', label='Regressionslinie')
+plt.xlabel('Log(Preis, verschoben)')
+plt.ylabel('Log(Nachfrage)')
+plt.legend()
+plt.show()
