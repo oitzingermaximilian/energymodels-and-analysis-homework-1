@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
-
+from statsmodels.tsa.stattools import adfuller
 
 def read_hourly_prices(csv_file_path):
     """
@@ -67,6 +67,32 @@ prices_eur = prices * 10
 
 load_kWh = load #* 1000
 
+
+# --- Function to Perform ADF Test ---
+def adf_test(series, name):
+    result = adfuller(series.dropna())  # Drop NA to avoid errors
+    print(f"ADF Test for {name}:")
+    print(f"  Test Statistic: {result[0]:.4f}")
+    print(f"  p-value: {result[1]:.4f}")
+    print(f"  Critical Values: {result[4]}")
+    if result[1] < 0.05:
+        print(f"  ✅ {name} is stationary (reject H0)")
+    else:
+        print(f"  ❌ {name} is non-stationary (fail to reject H0)")
+    print("-" * 50)
+
+# --- Apply ADF Test on Price and Load ---
+adf_test(prices_eur, "Electricity Price")
+adf_test(load_kWh, "Electricity Load")
+
+# --- If Non-Stationary: Take First Difference and Re-test ---
+if adfuller(prices_eur.dropna())[1] >= 0.05:
+    adf_test(prices_eur.diff().dropna(), "Differenced Electricity Price")
+
+if adfuller(load_kWh.dropna())[1] >= 0.05:
+    adf_test(load_kWh.diff().dropna(), "Differenced Electricity Load")
+
+
 load_kWh = load_kWh.reset_index()  # Moves index to a column
 prices_eur = prices_eur.reset_index()
 df = pd.merge(load_kWh, prices_eur, left_index=True, right_index=True)
@@ -84,8 +110,11 @@ log_load = np.log(df_filtered["Value_ScaleTo100"])
 # Regression: log(load) ~ log(price)
 X = sm.add_constant(log_price)  # Fügt den Intercept (log(C)) hinzu
 y = log_load
+
 model = sm.OLS(y, X).fit()
 print(model.summary())
+model_hac = sm.OLS(y, X).fit(cov_type='HAC', cov_kwds={'maxlags': 24})  # Adjust lags if needed
+print(model_hac.summary())
 electricity_demand_elasticity = model.params['AT']
 print('')
 print("+ ESTIMATED ELECTRICITY DEMAND ELASTICITY: {:.4f}".format(electricity_demand_elasticity))
