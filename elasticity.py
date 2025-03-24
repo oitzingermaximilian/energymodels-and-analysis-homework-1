@@ -1,6 +1,6 @@
+import numpy as np
 import pandas as pd
 import statsmodels.api as sm
-import numpy as np
 import matplotlib.pyplot as plt
 
 def read_hourly_prices(csv_file_path):
@@ -56,27 +56,52 @@ def read_load_profiles(excel_file_path, sheet_name=0):
         print(f"Error reading file: {e}")
         return None
 
-# Example usage:
+
 load = read_load_profiles("data_assignement_1/hourly_load_profile_electricity_AT_2023.xlsx")
 prices = read_hourly_prices("data_assignement_1/preise2023.csv")
-print(prices.head())  # Zeigt die ersten 5 Zeilen des prices DataFrames
-print(load.head())    # Zeigt die ersten 5 Zeilen des load DataFrames
 
-# Indizes setzen (0 bis 8759 für beide DataFrames)
-prices.index = range(8760)
-load.index = range(8760)
-prices_Eur = prices * 10
-# Lineares Modell
-X = sm.add_constant(prices_Eur)  # Konstante hinzufügen
-model = sm.OLS(load, X).fit()
-print(model.summary())
+prices_eur = prices * 10
 
-# Ergebnisse visualisieren
-plt.scatter(prices, load, alpha=0.5)
-plt.plot(prices, model.predict(X), color="red", label="Regression")
-plt.xlabel("Preis (€/MWh)")
-plt.ylabel("Last (MWh/h)")
-plt.title("Preiselastizitätsanalyse")
+load = load.reset_index()  # Moves index to a column
+prices_eur = prices_eur.reset_index()
+df = pd.merge(load, prices_eur, left_index=True, right_index=True)
+
+# Nur gültige Werte für log-log Regression (price > 0, load > 0)
+df_filtered = df[(df['AT'] > 0) & (df['Value_ScaleTo100'] > 0)]
+
+print(df_filtered)
+
+# Log-Transformation
+log_price = np.log(df_filtered['AT'])
+log_load = np.log(df_filtered['Value_ScaleTo100'])
+
+
+
+# Regression: log(load) ~ log(price)
+X = sm.add_constant(log_price)  # Fügt den Intercept (log(C)) hinzu
+model = sm.OLS(log_load, X)
+results = model.fit()
+
+# Ergebnisse
+alpha = results.params['AT']  # Elastizitätskoeffizient
+p_value = results.pvalues['AT']  # p-Wert für alpha
+r_squared = results.rsquared  # Bestimmtheitsmaß
+
+print(f"Elastizität (α): {alpha:.4f}")
+print(f"p-Wert: {p_value:.4f}")
+print(f"R²: {r_squared:.4f}")
+
+# Signifikanzprüfung
+if p_value < 0.05:
+    print("→ Die Elastizität ist statistisch signifikant (p < 0.05).")
+else:
+    print("→ Die Elastizität ist NICHT signifikant.")
+
+# Plot der Regression
+plt.scatter(log_price, log_load, alpha=0.5, label='Daten')
+plt.plot(log_price, results.fittedvalues, 'r-', label='Regressionsgerade')
+plt.xlabel('log(Preis)')
+plt.ylabel('log(Nachfrage)')
 plt.legend()
 plt.show()
 
