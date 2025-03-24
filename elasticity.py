@@ -65,9 +65,11 @@ prices = read_hourly_prices("data_assignement_1/preise2023.csv")
 
 prices_eur = prices * 10
 
-load = load.reset_index()  # Moves index to a column
+load_kWh = load #* 1000
+
+load_kWh = load_kWh.reset_index()  # Moves index to a column
 prices_eur = prices_eur.reset_index()
-df = pd.merge(load, prices_eur, left_index=True, right_index=True)
+df = pd.merge(load_kWh, prices_eur, left_index=True, right_index=True)
 
 # Nur gültige Werte für log-log Regression (price > 0, load > 0)
 df_filtered = df[(df["AT"] > 0) & (df["Value_ScaleTo100"] > 0)]
