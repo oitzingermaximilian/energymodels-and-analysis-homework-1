@@ -1,8 +1,6 @@
-import numpy as np
 import pandas as pd
 import statsmodels.api as sm
-import matplotlib.pyplot as plt
-
+import numpy as np
 
 def read_hourly_prices(csv_file_path):
     """
@@ -60,15 +58,44 @@ def read_load_profiles(excel_file_path, sheet_name=0):
 # Example usage:
 load = read_load_profiles("data_assignement_1/hourly_load_profile_electricity_AT_2023.xlsx")
 prices = read_hourly_prices("data_assignement_1/preise2023.csv")
-print(load)
-print(prices)
+print(prices.head())  # Zeigt die ersten 5 Zeilen des prices DataFrames
+print(load.head())    # Zeigt die ersten 5 Zeilen des load DataFrames
 
+# Indizes setzen (0 bis 8759 für beide DataFrames)
+prices.index = range(8760)
+load.index = range(8760)
 
-# For non-log methods, we can keep negatives but add small offset to avoid division by zero
-load_clean = load.copy()
-price_clean = prices.copy()
-load_clean = load_clean + 1e-6  # Small offset to avoid exact zeros
-price_clean = (price_clean + 1e-6) * 10 #to convert to €/Mwh
+# DataFrames zusammenführen (auf Basis des Index)
+df = pd.concat([prices, load], axis=1)
 
-log_price = np.log(price_clean)
-log_load = np.log(load_clean)
+df['AT'] = df['AT'] * 10
+
+# Überprüfen auf NaN oder unendliche Werte
+if df['AT'].isnull().any() or np.any(np.isinf(df['AT'])):
+    print("Fehler: Es gibt NaN oder unendliche Werte in den Preisen.")
+
+# Daten vor der logarithmischen Transformation bereinigen
+df = df[df['AT'] > -1]  # Entferne alle Zeilen, bei denen der Preis <= -1 ist (damit log(x+1) funktioniert)
+
+# Logarithmische Transformation der Preise und Nachfrage
+df['log_price'] = np.log(df['AT'] + 1)  # log(P+1), falls AT negative Werte hat
+df['log_demand'] = np.log(df['Value_ScaleTo100'])
+
+# Überprüfen auf NaN oder unendliche Werte nach der Transformation
+if df['log_price'].isnull().any() or np.any(np.isinf(df['log_price'])):
+    print("Fehler: Es gibt NaN oder unendliche Werte nach der Transformation.")
+
+# Regression durchführen, wenn die Daten in Ordnung sind
+X = sm.add_constant(df['log_price'])  # Preis (log-transformed)
+Y = df['log_demand']  # Nachfrage (log-transformed)
+
+# OLS-Regression durchführen
+model = sm.OLS(Y, X).fit()
+
+# Ergebnisse ausgeben
+print(model.summary())
+
+# Preiselastizität als der Koeffizient des Preises
+price_elasticity = model.params['log_price']
+print(f'Preis-Elastizität der Nachfrage: {price_elasticity:.4f}')
+
