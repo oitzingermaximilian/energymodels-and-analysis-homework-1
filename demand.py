@@ -1,9 +1,10 @@
 import pandas as pd
-import os 
+import os
 
-os.chdir('D:\Energiemodelle und Analysen\energymodels-and-analysis-homework-1\data_assignement_1')
+os.chdir(
+    "D:\Energiemodelle und Analysen\energymodels-and-analysis-homework-1\data_assignement_1"
+)
 # choose your path
-
 
 
 # prepare input data
@@ -20,18 +21,16 @@ def convert_prices(input_file, price_column="AT"):
     """
     # CSV einlesen
     df = pd.read_csv(input_file)
-    
+
     # Sicherstellen, dass die Preisspalte existiert
     if price_column not in df.columns:
         raise ValueError(f"Spalte '{price_column}' nicht in der CSV-Datei gefunden.")
-    
+
     # Umrechnung von ct/kWh in €/MWh
     df["price_EUR_MWh"] = df[price_column] * 10
-    
 
     print("Umrechnung abgeschlossen.")
     return df
-
 
 
 rawdata = pd.read_excel("hourly_load_profile_electricity_AT_2023.xlsx")
@@ -44,23 +43,21 @@ tageszeiten = [i % 24 for i in range(8760)]  # Wiederholt 0-23 für 8760 Stunden
 
 # Füge beide DataFrames zusammen
 # Angenommen, data_demand und data_price haben beide 8760 Zeilen
-combined_data = pd.DataFrame({
-    'Strompreis': data_price,
-    'Nachfrage': data_demand,
-    'Tageszeit': tageszeiten
-})
+combined_data = pd.DataFrame(
+    {"Strompreis": data_price, "Nachfrage": data_demand, "Tageszeit": tageszeiten}
+)
 
-#%%
-#create model
+# %%
+# create model
 
 import statsmodels.api as sm
 
 # Unabhängige Variablen (Strompreis und Tageszeit)
-X = combined_data[['Strompreis', 'Tageszeit']]  # Strompreis und Tageszeit
+X = combined_data[["Strompreis", "Tageszeit"]]  # Strompreis und Tageszeit
 X = sm.add_constant(X)  # Fügt den konstanten Term (Beta_0) hinzu
 
 # Abhängige Variable (Nachfrage)
-y = combined_data['Nachfrage']
+y = combined_data["Nachfrage"]
 
 # Erstelle das lineare Regressionsmodell
 model = sm.OLS(y, X)  # OLS (Ordinary Least Squares) Regressionsmodell
@@ -68,7 +65,3 @@ results = model.fit()  # Fitte das Modell
 
 # Zeige die Ergebnisse der Regression an
 print(results.summary())
-
-
-
-
