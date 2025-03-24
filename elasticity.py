@@ -1,6 +1,7 @@
 import pandas as pd
 import statsmodels.api as sm
 import numpy as np
+import matplotlib.pyplot as plt
 
 def read_hourly_prices(csv_file_path):
     """
@@ -64,38 +65,18 @@ print(load.head())    # Zeigt die ersten 5 Zeilen des load DataFrames
 # Indizes setzen (0 bis 8759 für beide DataFrames)
 prices.index = range(8760)
 load.index = range(8760)
-
-# DataFrames zusammenführen (auf Basis des Index)
-df = pd.concat([prices, load], axis=1)
-
-df['AT'] = df['AT'] * 10
-
-# Überprüfen auf NaN oder unendliche Werte
-if df['AT'].isnull().any() or np.any(np.isinf(df['AT'])):
-    print("Fehler: Es gibt NaN oder unendliche Werte in den Preisen.")
-
-# Daten vor der logarithmischen Transformation bereinigen
-df = df[df['AT'] > -1]  # Entferne alle Zeilen, bei denen der Preis <= -1 ist (damit log(x+1) funktioniert)
-
-# Logarithmische Transformation der Preise und Nachfrage
-df['log_price'] = np.log(df['AT'] + 1)  # log(P+1), falls AT negative Werte hat
-df['log_demand'] = np.log(df['Value_ScaleTo100'])
-
-# Überprüfen auf NaN oder unendliche Werte nach der Transformation
-if df['log_price'].isnull().any() or np.any(np.isinf(df['log_price'])):
-    print("Fehler: Es gibt NaN oder unendliche Werte nach der Transformation.")
-
-# Regression durchführen, wenn die Daten in Ordnung sind
-X = sm.add_constant(df['log_price'])  # Preis (log-transformed)
-Y = df['log_demand']  # Nachfrage (log-transformed)
-
-# OLS-Regression durchführen
-model = sm.OLS(Y, X).fit()
-
-# Ergebnisse ausgeben
+prices_Eur = prices * 10
+# Lineares Modell
+X = sm.add_constant(prices_Eur)  # Konstante hinzufügen
+model = sm.OLS(load, X).fit()
 print(model.summary())
 
-# Preiselastizität als der Koeffizient des Preises
-price_elasticity = model.params['log_price']
-print(f'Preis-Elastizität der Nachfrage: {price_elasticity:.4f}')
+# Ergebnisse visualisieren
+plt.scatter(prices, load, alpha=0.5)
+plt.plot(prices, model.predict(X), color="red", label="Regression")
+plt.xlabel("Preis (€/MWh)")
+plt.ylabel("Last (MWh/h)")
+plt.title("Preiselastizitätsanalyse")
+plt.legend()
+plt.show()
 
