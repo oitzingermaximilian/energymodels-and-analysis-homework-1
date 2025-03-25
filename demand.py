@@ -1,12 +1,6 @@
 import pandas as pd
-import os
-
-os.chdir(
-    "D:\Energiemodelle und Analysen\energymodels-and-analysis-homework-1\data_assignement_1"
-)
-# choose your path
-
-
+import statsmodels.api as sm
+import numpy as np
 # prepare input data
 
 
@@ -33,10 +27,10 @@ def convert_prices(input_file, price_column="AT"):
     return df
 
 
-rawdata = pd.read_excel("hourly_load_profile_electricity_AT_2023.xlsx")
+rawdata = pd.read_excel("data_assignement_1/hourly_load_profile_electricity_AT_2023.xlsx")
 data_demand = rawdata["Value"]
 
-data_price = convert_prices("preise2023.csv")
+data_price = convert_prices("data_assignement_1/preise2023.csv")
 data_price = data_price["price_EUR_MWh"]
 
 tageszeiten = [i % 24 for i in range(8760)]  # Wiederholt 0-23 für 8760 Stunden
@@ -47,21 +41,45 @@ combined_data = pd.DataFrame(
     {"Strompreis": data_price, "Nachfrage": data_demand, "Tageszeit": tageszeiten}
 )
 
+
+# Funktion zur Einteilung der Tageszeiten
+def categorize_time(hour):
+    if 0 <= hour < 6:
+        return "Nacht"
+    elif 6 <= hour < 12:
+        return "Morgen"
+    elif 12 <= hour < 18:
+        return "Tag"
+    else:
+        return "Abend"
+
+# Dummy-Variablen erstellen
+combined_data["Tageszeit_kategorie"] = combined_data["Tageszeit"].apply(categorize_time)
+dummies = pd.get_dummies(combined_data["Tageszeit_kategorie"], drop_first=False)  # Eine Kategorie weglassen (Referenz)
+
+# Dummies ins DataFrame integrieren
+combined_data = pd.concat([combined_data, dummies], axis=1)
+
+print(dummies.columns)  # Zeigt die Namen der erstellten Dummy-Variablen
+
+
 # %%
 # create model
+# Modell mit Dummy-Variablen
 
-import statsmodels.api as sm
+X = combined_data[['Strompreis', 'Morgen', 'Nacht', 'Tag', 'Abend']]  # Abend ist die Referenz
+X = sm.add_constant(X)  # Konstante hinzufügen
+y = combined_data['Nachfrage']
 
-# Unabhängige Variablen (Strompreis und Tageszeit)
-X = combined_data[["Strompreis", "Tageszeit"]]  # Strompreis und Tageszeit
-X = sm.add_constant(X)  # Fügt den konstanten Term (Beta_0) hinzu
+# Regression durchführen
+model = sm.OLS(y, X)
+results = model.fit()
 
-# Abhängige Variable (Nachfrage)
-y = combined_data["Nachfrage"]
-
-# Erstelle das lineare Regressionsmodell
-model = sm.OLS(y, X)  # OLS (Ordinary Least Squares) Regressionsmodell
-results = model.fit()  # Fitte das Modell
-
-# Zeige die Ergebnisse der Regression an
+# Ergebnisse anzeigen
 print(results.summary())
+
+
+
+#%%
+print(combined_data)
+
