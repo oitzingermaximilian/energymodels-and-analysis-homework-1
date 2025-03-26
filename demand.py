@@ -1,3 +1,5 @@
+#%%
+
 import pandas as pd
 import statsmodels.api as sm
 import numpy as np
@@ -33,53 +35,42 @@ data_demand = rawdata["Value"]
 data_price = convert_prices("data_assignement_1/preise2023.csv")
 data_price = data_price["price_EUR_MWh"]
 
-tageszeiten = [i % 24 for i in range(8760)]  # Wiederholt 0-23 für 8760 Stunden
 
+# Datei einlesen und Header überspringen
+file_path = "data_assignement_1/Wetterdaten_Basel_2023.csv"  # Pfad zur Datei anpassen
+
+# Die Datei einlesen, wobei die ersten Zeilen (Metadaten) übersprungen werden
+df_weather = pd.read_csv(file_path, skiprows=10)  # 10 Zeilen überspringen (anpassen, falls nötig)
+
+# Spalten umbenennen (optional)
+df_weather.columns = ["timestamp", "temperature"]
+
+# Timestamp in ein datetime-Format umwandeln
+df_weather["timestamp"] = pd.to_datetime(df_weather["timestamp"], format="%Y%m%dT%H%M")
+
+
+
+tageszeiten = [i % 24 for i in range(8760)]  # Wiederholt 0-23 für 8760 Stunden
 # Füge beide DataFrames zusammen
 # Angenommen, data_demand und data_price haben beide 8760 Zeilen
 combined_data = pd.DataFrame(
     {"Strompreis": data_price, "Nachfrage": data_demand, "Tageszeit": tageszeiten}
 )
 
-
-# Funktion zur Einteilung der Tageszeiten
-def categorize_time(hour):
-    if 0 <= hour < 6:
-        return "Nacht"
-    elif 6 <= hour < 12:
-        return "Morgen"
-    elif 12 <= hour < 18:
-        return "Tag"
-    else:
-        return "Abend"
-
-# Dummy-Variablen erstellen
-combined_data["Tageszeit_kategorie"] = combined_data["Tageszeit"].apply(categorize_time)
-dummies = pd.get_dummies(combined_data["Tageszeit_kategorie"], drop_first=False)  # Eine Kategorie weglassen (Referenz)
-
-# Dummies ins DataFrame integrieren
-combined_data = pd.concat([combined_data, dummies], axis=1)
-
-print(dummies.columns)  # Zeigt die Namen der erstellten Dummy-Variablen
+combined_data['Temperatur']=df_weather["temperature"]
+combined_data["Tageszeit_sin"] = np.sin(2 * np.pi * combined_data["Tageszeit"] / 24)
+combined_data["Tageszeit_cos"] = np.cos(2 * np.pi * combined_data["Tageszeit"] / 24)
+#%%
+print(combined_data)
 
 
-# %%
-# create model
-# Modell mit Dummy-Variablen
-
-X = combined_data[['Strompreis', 'Morgen', 'Nacht', 'Tag', 'Abend']]  # Abend ist die Referenz
-X = sm.add_constant(X)  # Konstante hinzufügen
+X = combined_data[['Strompreis', 'Tageszeit_cos', 'Temperatur']]
+X = sm.add_constant(X)
 y = combined_data['Nachfrage']
 
-# Regression durchführen
 model = sm.OLS(y, X)
 results = model.fit()
 
-# Ergebnisse anzeigen
 print(results.summary())
 
-
-
-#%%
-print(combined_data)
 
