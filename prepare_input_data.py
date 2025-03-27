@@ -64,8 +64,13 @@ def load_weather_data(file_path):
     df_weather["timestamp"] = pd.to_datetime(df_weather["timestamp"], format="%Y%m%dT%H%M")
     return df_weather
 
+def load_power_gen_data(file_path):
+    rawdata = pd.read_excel(file_path)
+    return rawdata[["Stromerzeugung"]]  # Doppelter [ ]-Index macht es zum DataFrame
 
-def prepare_combined_data(demand_file, price_file, weather_file, import_export_file):
+
+
+def prepare_combined_data(demand_file, price_file, weather_file, import_export_file, power_gen_file):
     """
     Bereitet die kombinierten Daten aus den Dateien vor.
 
@@ -79,6 +84,7 @@ def prepare_combined_data(demand_file, price_file, weather_file, import_export_f
     data_price = convert_prices(price_file)["price_EUR_MWh"]
     df_weather = load_weather_data(weather_file)
     df_import_export = load_import_export_data(import_export_file)
+    df_strom_gen = load_power_gen_data(power_gen_file)
 
     # Überprüfen der Länge jeder Datei
     if len(data_demand) != 8760:
@@ -98,7 +104,8 @@ def prepare_combined_data(demand_file, price_file, weather_file, import_export_f
         "Tageszeit": tageszeiten,
         "Temperatur": df_weather["temperature"],
         "Stromexport": df_import_export["Stromexport"],
-        "Stromimport": df_import_export["Stromimport"]
+        "Stromimport": df_import_export["Stromimport"],
+        "Stromerzeugung": df_strom_gen["Stromerzeugung"],
     })
 
     # Hinzufügen der Sinus- und Cosinus-Spalten für die Tageszeit
