@@ -2,6 +2,8 @@
 import pandas as pd
 import numpy as np
 
+
+
 def convert_prices(input_file, price_column="AT"):
     """
     Liest eine CSV-Datei mit stündlichen Strompreisen in ct/kWh ein,
@@ -112,7 +114,56 @@ def prepare_combined_data(demand_file, price_file, weather_file, import_export_f
     combined_data["Tageszeit_sin"] = np.sin(2 * np.pi * combined_data["Tageszeit"] / 24)
     combined_data["Tageszeit_cos"] = np.cos(2 * np.pi * combined_data["Tageszeit"] / 24)
 
+
     return combined_data
+
+
+def z_score_normalize_dataframe(df, exclude_columns=None, return_scaler_objects=False):
+    """
+    Führt eine Z-Score-Standardisierung für alle numerischen Spalten eines DataFrames durch.
+
+    Parameter:
+    ----------
+    df : pandas.DataFrame
+        Input DataFrame mit den zu normalisierenden Daten.
+    exclude_columns : list, optional
+        Liste von Spaltennamen, die von der Normalisierung ausgeschlossen werden sollen.
+    return_scaler_objects : bool, optional
+        Wenn True, wird ein Dictionary der Scaler-Objekte zurückgegeben (für Rücktransformation).
+
+    Returns:
+    --------
+    normalized_df : pandas.DataFrame
+        DataFrame mit standardisierten Werten.
+    scalers : dict (optional)
+        Nur wenn return_scaler_objects=True: Dictionary der Scaler-Objekte (Schlüssel = Spaltennamen).
+    """
+
+    # Erstelle Kopie des originalen DataFrames
+    normalized_df = df.copy()
+
+    # Initialisiere Scaler-Dictionary falls benötigt
+    scalers = {} if return_scaler_objects else None
+
+    # Bestimme zu normalisierende Spalten
+    numeric_columns = df.select_dtypes(include=[np.number]).columns
+
+    if exclude_columns:
+        numeric_columns = numeric_columns.difference(exclude_columns)
+
+    # Normalisierungsschleife
+    for column in numeric_columns:
+        scaler = StandardScaler()
+        normalized_df[column] = scaler.fit_transform(df[[column]])
+
+        if return_scaler_objects:
+            scalers[column] = scaler
+
+    # Optional: Scaler-Objekte zurückgeben
+    if return_scaler_objects:
+        return normalized_df, scalers
+    else:
+        return normalized_df
 
 
 
