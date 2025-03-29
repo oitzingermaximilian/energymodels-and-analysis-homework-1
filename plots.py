@@ -44,9 +44,9 @@ combined_data = pd.concat([combined_data, dummies], axis=1)
 
 
 y = combined_data['Nachfrage']
-x = combined_data['Tageszeit_Morgen']
+x = np.linspace(0,8760,8760)
 plt.ylabel('Strom Nachfrage [kWh]')
-plt.xlabel('morgen [kWh]')
+plt.xlabel('Stunde')
 plt.scatter(x,y)
 plt.show()
 
@@ -64,3 +64,6 @@ plt.xlabel('abend [kWh]')
 plt.scatter(x,y)
 plt.show()
 
+#%%
+x = np.linspace(0,8760,8760)
+print(len(x))

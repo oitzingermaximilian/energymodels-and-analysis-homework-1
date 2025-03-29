@@ -43,10 +43,8 @@ combined_data = pd.concat([combined_data, dummies], axis=1)
 
 
 #%%
-# Dynamik Modell
-X = combined_data[['Tageszeit_Morgen',
-                  'Tageszeit_Nachmittag',
-                  'Tageszeit_Abend', 'Strompreis']]
+# ARX Modell
+X = combined_data[['Nachfrage_lag1', 'Tageszeit_cos', 'Temperatur', 'Stromerzeugung']]
 X = sm.add_constant(X)  # Konstante hinzufügen
 y = combined_data['Nachfrage']
 
@@ -61,9 +59,7 @@ print(results.summary())
 #%% Multikollinearität prüfen (Dynamik Modell)
 
 # Unabhängige Variablen (inklusive Konstante)
-X = combined_data[['Tageszeit_Morgen',
-                  'Tageszeit_Nachmittag',
-                  'Tageszeit_Abend']]  # Falls du mehr Variablen hast, ergänzen!
+X = combined_data[['Nachfrage_lag1', 'Tageszeit_cos', 'Temperatur', 'Stromerzeugung']]  # Falls du mehr Variablen hast, ergänzen!
 X = sm.add_constant(X)  # Konstante für das Modell
 
 # VIF berechnen
@@ -76,21 +72,33 @@ print(vif_data)
 
 
 #%% Markt Modell
-X2 = combined_data[['Stromerzeugung', 'Stromexport', 'Stromimport', 'Tageszeit_sin']]
-X2 = sm.add_constant(X2)  # Konstante hinzufügen
+X = combined_data[[
+    'Nachfrage_lag1',
+    'Strompreis',
+    'Stromerzeugung',
+    'Tageszeit_sin',
+    'Tageszeit_cos'
+]]
+X = sm.add_constant(X)  # Konstante hinzufügen
+y = combined_data['Nachfrage']
 
-# Regression durchführen
-model2 = sm.OLS(y, X2)
-results2 = model2.fit()
+# 4. Regression
+model = sm.OLS(y, X)
+results = model.fit()
 
-# Ergebnisse anzeigen
-print("\nModell 2: Marktmodell")
-print(results2.summary())
+# 5. Ergebnisse + Diagnostik
+print(results.summary())
 
 #%% Multikollinearität prüfen (Markt Modell)
 
 # Unabhängige Variablen (inklusive Konstante)
-X = combined_data[['Stromerzeugung', 'Stromexport', 'Stromimport', 'Tageszeit_sin']]  # Falls du mehr Variablen hast, ergänzen!
+X = combined_data[[
+    'Nachfrage_lag1',
+    'Strompreis',
+    'Stromimport',
+    'Tageszeit_sin',
+    'Tageszeit_cos'
+]] # Falls du mehr Variablen hast, ergänzen!
 X = sm.add_constant(X)  # Konstante für das Modell
 
 # VIF berechnen

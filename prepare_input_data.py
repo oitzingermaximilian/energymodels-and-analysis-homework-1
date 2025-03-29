@@ -68,7 +68,7 @@ def load_weather_data(file_path):
 
 def load_power_gen_data(file_path):
     rawdata = pd.read_excel(file_path)
-    return rawdata[["Stromerzeugung"]]  # Doppelter [ ]-Index macht es zum DataFrame
+    return rawdata[["Stromerzeugung", "Stromerzeugung_ern"]]  # Doppelter [ ]-Index macht es zum DataFrame
 
 
 
@@ -108,6 +108,7 @@ def prepare_combined_data(demand_file, price_file, weather_file, import_export_f
         "Stromexport": df_import_export["Stromexport"],
         "Stromimport": df_import_export["Stromimport"],
         "Stromerzeugung": df_strom_gen["Stromerzeugung"],
+        "Stromerzeugung_ern": df_strom_gen["Stromerzeugung_ern"],
     })
 
     # Hinzufügen der Sinus- und Cosinus-Spalten für die Tageszeit
