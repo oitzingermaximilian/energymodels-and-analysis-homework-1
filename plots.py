@@ -26,6 +26,16 @@ combined_data.loc[:, "Nachfrage_lag1"] = combined_data["Nachfrage"].shift(1)
 mean_lag = combined_data["Nachfrage"].mean()
 combined_data.loc[:, "Nachfrage_lag1"] = combined_data["Nachfrage_lag1"].fillna(mean_lag)
 
+combined_data['Nachfrage_change'] = combined_data['Nachfrage'].pct_change()
+combined_data['Preis_change'] = combined_data['Strompreis'].pct_change()
+combined_data['Elastizität'] = combined_data['Nachfrage_change'] / combined_data['Preis_change']
+
+# Step 1: Replace infinities with NaN
+combined_data['Elastizität'] = combined_data['Elastizität'].replace([np.inf, -np.inf], np.nan)
+
+# Step 2: Drop all NaN values (including former infinities)
+combined_data = combined_data.dropna(subset=['Elastizität'])
+
 # Tageszeit als kategorische Variable (6-Stunden-Blöcke)
 combined_data['Tagesblock'] = pd.cut(combined_data['Tageszeit'],
                                    bins=[0, 6, 12, 18, 24],
@@ -43,27 +53,10 @@ combined_data.drop('Tagesblock', axis=1, inplace=True)
 combined_data = pd.concat([combined_data, dummies], axis=1)
 
 
-y = combined_data['Nachfrage']
-x = np.linspace(0,8760,8760)
+y = combined_data['Nachfrage_lag1']
+x = combined_data['Strompreis']
 plt.ylabel('Strom Nachfrage [kWh]')
-plt.xlabel('Stunde')
+plt.xlabel('Strompreis')
 plt.scatter(x,y)
 plt.show()
 
-y = combined_data['Nachfrage']
-x = combined_data['Tageszeit_Nachmittag']
-plt.ylabel('Strom Nachfrage [kWh]')
-plt.xlabel('nachmittag [kWh]')
-plt.scatter(x,y)
-plt.show()
-
-y = combined_data['Nachfrage']
-x = combined_data['Tageszeit_Abend']
-plt.ylabel('Strom Nachfrage [kWh]')
-plt.xlabel('abend [kWh]')
-plt.scatter(x,y)
-plt.show()
-
-#%%
-x = np.linspace(0,8760,8760)
-print(len(x))

@@ -41,10 +41,21 @@ combined_data.drop('Tagesblock', axis=1, inplace=True)
 # Neue Variablen hinzufügen
 combined_data = pd.concat([combined_data, dummies], axis=1)
 
+combined_data['Nachfrage_change'] = combined_data['Nachfrage'].pct_change()
+combined_data['Preis_change'] = combined_data['Strompreis'].pct_change()
+combined_data['Elastizität'] = combined_data['Nachfrage_change'] / combined_data['Preis_change']
+
+# Step 1: Replace infinities with NaN
+combined_data['Elastizität'] = combined_data['Elastizität'].replace([np.inf, -np.inf], np.nan)
+
+# Step 2: Drop all NaN values (including former infinities)
+combined_data = combined_data.dropna(subset=['Elastizität'])
+
+print(np.mean(combined_data['Elastizität']))
 
 #%%
 # ARX Modell
-X = combined_data[['Nachfrage_lag1', 'Tageszeit_cos', 'Temperatur', 'Stromerzeugung']]
+X = combined_data[['Nachfrage_lag1', 'Tageszeit_cos', 'Temperatur', 'Elastizität']]
 X = sm.add_constant(X)  # Konstante hinzufügen
 y = combined_data['Nachfrage']
 
@@ -59,7 +70,7 @@ print(results.summary())
 #%% Multikollinearität prüfen (Dynamik Modell)
 
 # Unabhängige Variablen (inklusive Konstante)
-X = combined_data[['Nachfrage_lag1', 'Tageszeit_cos', 'Temperatur', 'Stromerzeugung']]  # Falls du mehr Variablen hast, ergänzen!
+X = combined_data[['Nachfrage_lag1', 'Tageszeit_cos', 'Temperatur', 'Elastizität']]  # Falls du mehr Variablen hast, ergänzen!
 X = sm.add_constant(X)  # Konstante für das Modell
 
 # VIF berechnen
@@ -75,7 +86,7 @@ print(vif_data)
 X = combined_data[[
     'Nachfrage_lag1',
     'Strompreis',
-    'Stromerzeugung',
+    'Temperatur',
     'Tageszeit_sin',
     'Tageszeit_cos'
 ]]
