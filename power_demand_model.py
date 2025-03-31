@@ -55,7 +55,7 @@ print(np.mean(combined_data['Elastizität']))
 
 #%%
 # ARX Modell
-X = combined_data[['Nachfrage_lag1', 'Tageszeit_cos', 'Temperatur', 'Elastizität']]
+X = combined_data[[ 'Nachfrage_lag1','Tageszeit_cos', 'Temperatur', 'Elastizität']]
 X = sm.add_constant(X)  # Konstante hinzufügen
 y = combined_data['Nachfrage']
 
@@ -65,6 +65,41 @@ results = model.fit()
 
 # 5. Ergebnisse + Diagnostik
 print(results.summary())
+
+import statsmodels.api as sm
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# OLS-Modell anpassen
+X = sm.add_constant(X)  # Falls noch nicht geschehen
+model = sm.OLS(y, X).fit()
+
+# Plot erstellen
+sns.scatterplot(x=model.fittedvalues, y=model.resid)
+plt.axhline(0, color='black', linestyle='--', linewidth=0.8)
+plt.xlabel("Vorhergesagte Nachfrage [MWh]")
+plt.ylabel("Residuen [MWh]")
+plt.title("Residuen vs. Vorhersagen")
+
+# Option 1: Raw-String (empfohlen für Windows-Pfade)
+plt.savefig(r"D:\Energiemodelle und Analysen\energymodels-and-analysis-homework-1\plots\residuen_vs_vorhersagen.png")
+
+from statsmodels.graphics.tsaplots import plot_acf
+
+# ACF-Plot erstellen
+plot_acf(model.resid, lags=24)
+
+# Titel und Achsenbeschriftungen hinzufügen
+plt.title("Autokorrelationsfunktion der Residuen")
+plt.xlabel("Lag (Verzögerung = 24h)")
+plt.ylabel("Autokorrelation")
+plt.savefig(r"D:\Energiemodelle und Analysen\energymodels-and-analysis-homework-1\plots\autokorrelation.png")
+# Plot anzeigen
+plt.show()
+
+
+
+
 
 
 #%% Multikollinearität prüfen (Dynamik Modell)
