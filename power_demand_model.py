@@ -5,7 +5,9 @@ import prepare_input_data
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 import pandas as pd
 import numpy as np
+import seaborn as sns
 from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
 
 importlib.reload(prepare_input_data)
 
@@ -51,11 +53,11 @@ combined_data['Elastizität'] = combined_data['Elastizität'].replace([np.inf, -
 # Step 2: Drop all NaN values (including former infinities)
 combined_data = combined_data.dropna(subset=['Elastizität'])
 
-print(np.mean(combined_data['Elastizität']))
+
 
 #%%
 # ARX Modell
-X = combined_data[[ 'Nachfrage_lag1','Tageszeit_cos', 'Temperatur', 'Elastizität']]
+X = combined_data[[ 'Stromexport','Stromimport', 'Stromerzeugung']]
 X = sm.add_constant(X)  # Konstante hinzufügen
 y = combined_data['Nachfrage']
 
@@ -66,37 +68,29 @@ results = model.fit()
 # 5. Ergebnisse + Diagnostik
 print(results.summary())
 
-import statsmodels.api as sm
-import seaborn as sns
-import matplotlib.pyplot as plt
 
-# OLS-Modell anpassen
-X = sm.add_constant(X)  # Falls noch nicht geschehen
-model = sm.OLS(y, X).fit()
+# Residuen und angepasste Werte berechnen
+fitted_values = results.fittedvalues
+residuals = results.resid
 
-# Plot erstellen
-sns.scatterplot(x=model.fittedvalues, y=model.resid)
-plt.axhline(0, color='black', linestyle='--', linewidth=0.8)
-plt.xlabel("Vorhergesagte Nachfrage [MWh]")
-plt.ylabel("Residuen [MWh]")
-plt.title("Residuen vs. Vorhersagen")
 
-# Option 1: Raw-String (empfohlen für Windows-Pfade)
-plt.savefig(r"D:\Energiemodelle und Analysen\energymodels-and-analysis-homework-1\plots\residuen_vs_vorhersagen.png")
+# Plots
+plt.figure(figsize=(10, 6))
+plt.scatter(fitted_values, residuals, alpha=0.5)
+plt.axhline(y=0, color='r', linestyle='--')
+plt.xlabel('Angepasste Nachfragewerte [MWh] (Energiebilanz Regression )')
+plt.ylabel('Residuen der Nachfrage [MWh]')
+plt.title('Residuen vs. Angepasste Werte')
+plt.savefig("D:/Energiemodelle und Analysen/energymodels-and-analysis-homework-1/plots/residuen_vs_vorhersagen_modell1.png")
+
 
 from statsmodels.graphics.tsaplots import plot_acf
-
-# ACF-Plot erstellen
-plot_acf(model.resid, lags=24)
-
-# Titel und Achsenbeschriftungen hinzufügen
-plt.title("Autokorrelationsfunktion der Residuen")
-plt.xlabel("Lag (Verzögerung = 24h)")
+# ACF-Plot der Residuen (nach dem Fitten des Modells!)
+plot_acf(results.resid, lags=24, alpha=0.05)  # alpha=0.05 für 95%-Konfidenzintervall
+plt.xlabel("Lag (24h)")
 plt.ylabel("Autokorrelation")
-plt.savefig(r"D:\Energiemodelle und Analysen\energymodels-and-analysis-homework-1\plots\autokorrelation.png")
-# Plot anzeigen
-plt.show()
-
+plt.title("Autokorrelation der Residuen")
+plt.savefig("D:/Energiemodelle und Analysen/energymodels-and-analysis-homework-1/plots/Autokorrelation_modell1.png")
 
 
 
@@ -105,7 +99,7 @@ plt.show()
 #%% Multikollinearität prüfen (Dynamik Modell)
 
 # Unabhängige Variablen (inklusive Konstante)
-X = combined_data[['Nachfrage_lag1', 'Tageszeit_cos', 'Temperatur', 'Elastizität']]  # Falls du mehr Variablen hast, ergänzen!
+X = combined_data[['Stromimport', 'Stromexport', 'Stromerzeugung']]  # Falls du mehr Variablen hast, ergänzen!
 X = sm.add_constant(X)  # Konstante für das Modell
 
 # VIF berechnen
@@ -117,14 +111,8 @@ vif_data["VIF"] = [variance_inflation_factor(X.values, i) for i in range(X.shape
 print(vif_data)
 
 
-#%% Markt Modell
-X = combined_data[[
-    'Nachfrage_lag1',
-    'Strompreis',
-    'Temperatur',
-    'Tageszeit_sin',
-    'Tageszeit_cos'
-]]
+#%% Zeit Modell
+X = combined_data[['Nachfrage_lag1', 'Tageszeit_cos', 'Tageszeit_sin']]
 X = sm.add_constant(X)  # Konstante hinzufügen
 y = combined_data['Nachfrage']
 
@@ -135,13 +123,33 @@ results = model.fit()
 # 5. Ergebnisse + Diagnostik
 print(results.summary())
 
+fitted_values = results.fittedvalues
+residuals = results.resid
+
+
+# Plots
+plt.figure(figsize=(10, 6))
+plt.scatter(fitted_values, residuals, alpha=0.5)
+plt.axhline(y=0, color='r', linestyle='--')
+plt.xlabel('Angepasste Nachfragewerte [MWh] (Energiebilanz Regression )')
+plt.ylabel('Residuen der Nachfrage [MWh]')
+plt.title('Residuen vs. Angepasste Werte')
+plt.savefig("D:/Energiemodelle und Analysen/energymodels-and-analysis-homework-1/plots/residuen_vs_vorhersagen_modell2.png")
+
+
+from statsmodels.graphics.tsaplots import plot_acf
+# ACF-Plot der Residuen (nach dem Fitten des Modells!)
+plot_acf(results.resid, lags=24, alpha=0.05)  # alpha=0.05 für 95%-Konfidenzintervall
+plt.xlabel("Lag (24h)")
+plt.ylabel("Autokorrelation")
+plt.title("Autokorrelation der Residuen")
+plt.savefig("D:/Energiemodelle und Analysen/energymodels-and-analysis-homework-1/plots/Autokorrelation_modell2.png")
+
 #%% Multikollinearität prüfen (Markt Modell)
 
 # Unabhängige Variablen (inklusive Konstante)
 X = combined_data[[
     'Nachfrage_lag1',
-    'Strompreis',
-    'Stromimport',
     'Tageszeit_sin',
     'Tageszeit_cos'
 ]] # Falls du mehr Variablen hast, ergänzen!

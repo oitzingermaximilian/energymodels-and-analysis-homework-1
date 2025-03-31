@@ -53,7 +53,7 @@ combined_data.drop('Tagesblock', axis=1, inplace=True)
 combined_data = pd.concat([combined_data, dummies], axis=1)
 
 
-y = combined_data['Nachfrage_lag1']
+y = combined_data['Nachfrage']
 x = combined_data['Strompreis']
 plt.ylabel('Strom Nachfrage [kWh]')
 plt.xlabel('Strompreis')
