@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="Black">
+<<<<<<< Updated upstream
     <option name="sdkName" value="C:\Users\Alexander\miniconda3" />
   </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="C:\Users\Alexander\miniconda3" project-jdk-type="Python SDK" />
+=======
+    <option name="sdkName" value="pythonProject" />
+  </component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="urbs-test" project-jdk-type="Python SDK" />
+>>>>>>> Stashed changes
 </project>

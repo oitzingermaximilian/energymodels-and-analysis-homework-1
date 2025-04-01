@@ -63,9 +63,29 @@ load = read_load_profiles(
 )
 prices = read_hourly_prices("data_assignement_1/preise2023.csv")
 
-prices_eur = prices * 10
+prices_eur = (prices/100) #€/kWh
 
-load_kWh = load #* 1000
+load_kWh = load * 1000 #kwh
+
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
+
+# Plot für die Lastprofile (load)
+ax1.plot(load_kWh.index, load_kWh, label='Stromlast', color='lightblue')
+ax1.set_title('Zeitlicher Verlauf der Stromlast (2023)')
+ax1.set_ylabel('Stromlast [kWh]')
+ax1.grid(False)
+ax1.legend()
+
+# Plot für die Strompreise (prices)
+ax2.plot(prices_eur.index, prices_eur, label='Strompreis', color='orange')
+ax2.set_title('Zeitlicher Verlauf der Strompreise (2023)')
+ax2.set_xlabel('Zeit (Stunden)')
+ax2.set_ylabel('Strompreis [€/kWh]')
+ax2.grid(False)
+ax2.legend()
+
+plt.tight_layout()
+plt.show()
 
 
 # --- Function to Perform ADF Test ---
@@ -102,8 +122,17 @@ df_filtered = df[(df["AT"] > 0) & (df["Value_ScaleTo100"] > 0)]
 
 print(df_filtered)
 
+plt.scatter(df_filtered["AT"], df_filtered["Value_ScaleTo100"], alpha=0.5, label="Daten")
+plt.xlabel("Preis [€/kWh]")
+plt.ylabel("Nachfrage [kWh/h]")
+plt.legend()
+plt.show()
+
+
 # Log-Transformation
 log_price = np.log(df_filtered["AT"])
+print(log_price)
+
 log_load = np.log(df_filtered["Value_ScaleTo100"])
 
 
@@ -113,8 +142,6 @@ y = log_load
 
 model = sm.OLS(y, X).fit()
 print(model.summary())
-model_hac = sm.OLS(y, X).fit(cov_type='HAC', cov_kwds={'maxlags': 24})  # Adjust lags if needed
-print(model_hac.summary())
 electricity_demand_elasticity = model.params['AT']
 print('')
 print("+ ESTIMATED ELECTRICITY DEMAND ELASTICITY: {:.4f}".format(electricity_demand_elasticity))
@@ -141,7 +168,7 @@ else:
 # Plot der Regression
 plt.scatter(log_price, log_load, alpha=0.5, label="Daten")
 plt.plot(log_price, model.fittedvalues, "r-", label="Regressionsgerade")
-plt.xlabel("log(Preis)")
-plt.ylabel("log(Nachfrage)")
+plt.xlabel("log(Preis [€/MWh])")
+plt.ylabel("log(Nachfrage [MWh/h])")
 plt.legend()
 plt.show()
