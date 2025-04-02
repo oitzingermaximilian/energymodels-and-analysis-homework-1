@@ -43,7 +43,7 @@ combined_data.loc[:, ["Strompreis_lag1", "Strompreis_lag24", "Strompreis_lag168"
 
 #%%
 # herausfinden welcher lag den höchsten einfluss hat.
-X = combined_data[['Strompreis_lag1', 'Strompreis_lag24', 'Strompreis_lag168']]
+X = combined_data[['Nachfrage', 'Temperatur','Strompreis_lag1']]
 X = sm.add_constant(X)  # Konstante hinzufügen
 y = combined_data['Strompreis']
 
@@ -53,15 +53,41 @@ results = model.fit()
 
 # 5. Ergebnisse + Diagnostik
 print(results.summary())
+# Residuen und angepasste Werte berechnen
 
+
+fitted_values = results.fittedvalues
+residuals = results.resid
+
+
+# Plots
+plt.figure(figsize=(10, 6))
+plt.scatter(fitted_values, residuals, alpha=0.5)
+plt.axhline(y=0, color='r', linestyle='--')
+plt.xlabel('Angepasste Strompreise [€/MWh] (Energiebilanz Regression )')
+plt.ylabel('Residuen des Strompreises [€/MWh]')
+plt.title('Residuen vs. Angepasste Werte')
+plt.savefig("D:/Energiemodelle und Analysen/energymodels-and-analysis-homework-1/plots/residuen_vs_vorhersagen_modell_2C.png")
+
+
+from statsmodels.graphics.tsaplots import plot_acf
+# ACF-Plot der Residuen (nach dem Fitten des Modells!)
+plot_acf(results.resid, lags=24, alpha=0.05)  # alpha=0.05 für 95%-Konfidenzintervall
+plt.xlabel("Lag (24h)")
+plt.ylabel("Autokorrelation")
+plt.title("Autokorrelation der Residuen")
+plt.savefig("D:/Energiemodelle und Analysen/energymodels-and-analysis-homework-1/plots/Autokorrelation_modell_2C.png")
 #%%
-X = combined_data[['Nachfrage_lag1', 'Temperatur', 'Stromimport']]
-X = sm.add_constant(X)  # Konstante hinzufügen
-y = combined_data['Strompreis']
 
-# 4. Regression
-model = sm.OLS(y, X)
-results = model.fit()
+# Unabhängige Variablen (inklusive Konstante)
+X = combined_data[['Nachfrage', 'Temperatur', 'Strompreis_lag1']]  # Falls du mehr Variablen hast, ergänzen!
+X = sm.add_constant(X)  # Konstante für das Modell
 
-# 5. Ergebnisse + Diagnostik
-print(results.summary())
+# VIF berechnen
+vif_data = pd.DataFrame()
+vif_data["Variable"] = X.columns
+vif_data["VIF"] = [variance_inflation_factor(X.values, i) for i in range(X.shape[1])]
+
+# Ergebnisse anzeigen
+print(vif_data)
+
